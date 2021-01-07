@@ -5,15 +5,15 @@ class polar
 protected:
 
 public:
-		float x; //number
-	float s; //angle
+		double x; //number
+	double s; //angle
 
 	polar ();
-	polar(float number , float sita);
-	void setx(float x1);
-	void sets(float s1);
-	float getx();
-	float gets();
+	polar(double number , double sita);
+	void setx(double x1);
+	void sets(double s1);
+	double getx();
+	double gets();
 	polar operator*(polar p2);
 	polar operator/(polar p2);
 	void printinfo ();

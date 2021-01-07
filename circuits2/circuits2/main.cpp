@@ -40,13 +40,13 @@ int main()
 	int pn[11]; //positive side of source
 	int nn[11]; //negative side of source
 	int i=1;
-	float x[11]; //number of polar
-	float s[11]; // sita of polar
-	float real[11]; //real part of complex number
-	float imag[11]; //imag part of complex number
-	float cp[11]; //capasitance
-	float l[11]; //indactance
-	float w;
+	double x[11]; //number of polar
+	double s[11]; // sita of polar
+	double real[11]; //real part of complex number
+//	double imag[11]; //imag part of complex number
+	double cp[11]; //capasitance
+	double l[11]; //indactance
+	double w;
 	int cvi=0; //num of indpendent voltage source
 	int cr=0; //num of resistance
 	int cc=0; //num of capasitors
@@ -65,7 +65,7 @@ int main()
 		{
 			fin>>comp[k]>>pn[k]>>nn[k]>>x[k]>>s[k];
 			p[k]=new polar (x[k],s[k]);
-			v[k]=new ivs(*p[k],pn[k],nn[k]);
+			v[cvi]=new ivs(*p[k],pn[k],nn[k]);
 			cout<<"comp number "<<i<<" is indpendent voltage  source"<<endl;
 			cvi++;
 			i++;
@@ -107,7 +107,7 @@ int main()
 					i++;
 					fin>>comp[k]>>pn[k]>>nn[k]>>real[k];
 					c[k]=new complex (real[k],0);
-					r[k]=new resis (*c[k],pn[k],nn[k]);
+					r[cr]=new resis (*c[k],pn[k],nn[k]);
 					cr++;
 		}
 		if (name[k]== "Cap")
@@ -115,7 +115,7 @@ int main()
 			cout<<"comp number "<<i<<" is capacitance"<<endl;
 					i++;
 					fin>>comp[k]>>pn[k]>>nn[k]>>cp[k];
-					ca[k]=new caps (pn[k],nn[k],cp[k],w);
+					ca[cc]=new caps (pn[k],nn[k],cp[k],w);
 					cc++;
 		}
 		if (name[k] == "Ind")
@@ -123,27 +123,27 @@ int main()
 			cout<<"comp number "<<i<<" is inductance"<<endl;
 					i++;
 					fin>>comp[k]>>pn[k]>>nn[k]>>l[k];
-					in[k]=new ind (pn[k],nn[k],l[k],w);
+					in[ci]=new ind (pn[k],nn[k],l[k],w);
 					ci++;
 		}
 
 	}
 	}
 	fin.close();
-	complex zt; //total resistance in complex form
+	complex zt(0,0); //total resistance in complex form
 	for (int i=0; i<cr; i++)
 	{
-
-	   zt=zt+(r[i]->c);
+	
+	  zt+=(r[i]->c);
 	
 	}
 	for (int i=0; i<cc; i++)
 	{
-		zt=zt+(ca[i]->z);
+		zt+=(ca[i]->z);
 	}
 	for (int i=0; i<ci; i++)
 	{
-		zt=zt+(in[i]->z);
+		zt+=(in[i]->z);
 	}
 	cout<<"total resistance in complex form = ";
 	zt.printinfo();
@@ -166,5 +166,6 @@ int main()
 	current = vt2/pt;
 	cout<<"current in polar form = ";
 	current.printinfo();
-
+	int m; //not used
+	cin>>m; //not used
 }

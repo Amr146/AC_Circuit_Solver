@@ -8,7 +8,7 @@ polar::polar()
 	s=0;
 }
 
-polar::polar(float number , float sita)
+polar::polar(double number , double sita)
 {
 	x=number;
 	s=sita;
@@ -17,19 +17,19 @@ void polar:: printinfo ()
 {
 	cout<<x<<" "<<s<<endl;
 }
-void polar:: setx(float x1)
+void polar:: setx(double x1)
 {
 	x=x1;
 }
-	void polar:: sets(float s1)
+	void polar:: sets(double s1)
 	{
 		s=s1;
 	}
-	float polar:: getx()
+	double polar:: getx()
 	{
 		return x;
 	}
-	float polar:: gets()
+	double polar:: gets()
 	{
 		return s;
 	}

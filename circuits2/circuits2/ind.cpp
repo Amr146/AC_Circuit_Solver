@@ -1,7 +1,7 @@
 #include "ind.h"
 #include "complex.h"
 
-ind::ind(int pn1,int nn1,float l1,float w1)
+ind::ind(int pn1,int nn1,double l1,double w1)
 {
 	pn=pn1;
 	nn=nn1;
