@@ -1,7 +1,7 @@
 #include "caps.h"
 #include "complex.h"
 caps::caps(){}
-caps::caps(int pn1,int nn1,float c1,float w1)
+caps::caps(int pn1,int nn1,double c1,double w1)
 {
 	pn=pn1;
 	nn=nn1;

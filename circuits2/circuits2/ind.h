@@ -3,12 +3,12 @@
 class ind //inductor
 {
 public:
-	float l; //inda
-	float w; //omiga
+	double l; //inda
+	double w; //omiga
 	complex z; //imbedince(resistance)
 	int pn; //the two
 	int nn; //nodes
-	ind(int pn1,int nn1,float l1,float w1);
+	ind(int pn1,int nn1,double l1,double w1);
 	~ind(void);
 };
 

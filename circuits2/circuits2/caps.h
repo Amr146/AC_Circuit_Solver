@@ -3,13 +3,13 @@
 class caps //capsitor
 {
 public:
-	float c; //capsitance
-	float w; //omiga
+	double c; //capsitance
+	double w; //omiga
 	complex z; //imbedince(resistance)
 	int pn; //the two
 	int nn; //nodes
 	caps();
-	caps(int pn1,int nn1,float c1,float w1);
+	caps(int pn1,int nn1,double c1,double w1);
 	~caps(void);
 };
 

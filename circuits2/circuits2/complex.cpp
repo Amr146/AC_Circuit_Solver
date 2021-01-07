@@ -7,7 +7,7 @@ complex::complex()
 	real=0;
 	imag=0;
 }
-complex::complex(float r, float i)
+complex::complex(double r, double i)
 {
 	real=r;
 	imag=i;
@@ -34,6 +34,11 @@ complex complex:: operator-(complex c2)
 	c.real=real - c2.real;
 	c.imag=imag - c2.imag;
 	return c;
+}
+void complex:: operator+=(complex c2)
+{
+	this -> real += c2.real;
+		this -> imag += c2.imag;
 }
 complex::~complex(void)
 {
