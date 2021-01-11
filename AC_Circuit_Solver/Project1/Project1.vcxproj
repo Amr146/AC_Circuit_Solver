@@ -10,9 +10,13 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\main.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{ADEA9FFC-376B-4BEF-B42F-815268713A48}</ProjectGuid>
-    <RootNamespace>circuits2</RootNamespace>
+    <ProjectGuid>{63AD3843-8447-41DA-BF09-40C6CB608C09}</ProjectGuid>
+    <RootNamespace>Project1</RootNamespace>
+    <ProjectName>AC_Circuit_Solver</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -43,6 +47,8 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>D:\Collage\Electric circuits\AC_Circuit_Solver\eigen-3.3.9;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -54,6 +60,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -61,23 +68,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="caps.cpp" />
-    <ClCompile Include="complex.cpp" />
-    <ClCompile Include="ind.cpp" />
-    <ClCompile Include="ivs.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="polar.cpp" />
-    <ClCompile Include="resis.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="caps.h" />
-    <ClInclude Include="complex.h" />
-    <ClInclude Include="ind.h" />
-    <ClInclude Include="ivs.h" />
-    <ClInclude Include="polar.h" />
-    <ClInclude Include="resis.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

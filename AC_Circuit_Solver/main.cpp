@@ -1,29 +1,42 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <cmath>
+//#include <cmath>
+#include <Eigen\Dense>
 
 using namespace std;
+using namespace Eigen;
 
 /////////////////////////
 ////	Impedance	////
 ///////////////////////
 struct Impedance{
 	double rel, img;
-	
+	std::complex<double> z;
+	std::complex<double> y;
 	Impedance(){
 		rel = 0;
 		img = 0;
+		z.real(rel);
+		z.imag(img);
 	}
 
-	Impedance getAdmittance(){
+	std::complex<double> getAdmittance(){
 		Impedance conj;
-		if(rel == 0 && img == 0)
-			return conj;
 		double d = (rel * rel) + (img * img);
 		conj.rel = rel/d;
 		conj.img = -img/d;
-		return conj;
+		
+		y.real(conj.rel);
+		y.imag(conj.img);
+		return y;
+
+	}
+
+	std::complex<double> getImpedance(){
+		z.real(rel);
+		z.imag(img);
+		return z;
 	}
 
 	Impedance operator + (Impedance z){
@@ -53,48 +66,20 @@ struct Impedance{
 		p = p * conj;
 		return p;
 	}
-
-	bool operator == (Impedance z){
-		return (rel == z.rel && img == z.img);
-	}
-
 }nul;
-
-/////////////////////////
-////	Current		////
-///////////////////////
-struct Current{
-	double rel, img;
-	
-	Current(){
-		rel = 0;
-		img = 0;
-	}
-
-	Current operator + (Current z){
-		Current s;
-		s.rel = rel + z.rel;
-		s.img = img + z.img;
-		return s;
-	}
-
-	Current operator * (Current z){
-		Current s;
-		s.rel = (this->rel * z.rel - this->img * z.img);
-		s.img = (this->rel * z.img + this->img * z.rel);
-		return s;
-	}
-}nul3;
 
 /////////////////////////
 ////	Voltage		////
 ///////////////////////
 struct Voltage{
 	double rel, img;
+	std::complex<double> V;
 	
 	Voltage(){
 		rel = 0;
 		img = 0;
+		V.real(rel);
+		V.imag(img);
 	}
 
 	Voltage operator + (Voltage z){
@@ -111,16 +96,58 @@ struct Voltage{
 		return s;
 	}
 
-	Current operator / (Impedance z){
-		Impedance Admitt = z.getAdmittance();
-		Current i;
-		i.rel = (rel * Admitt.rel - img * Admitt.img);
-		i.img = (rel * Admitt.img + img * Admitt.rel);
+	std::complex<double> getVoltage(){
+		V.real(rel);
+		V.imag(img);
+		return V;
 
-		return i;
+	}
+};
+
+/////////////////////////
+////	Current		////
+///////////////////////
+struct Current{
+	double rel, img;
+	std::complex<double> I;
+	
+	Current(){
+		rel = 0;
+		img = 0;
+		I.real(rel);
+		I.imag(img);
 	}
 
-}nul2;
+	Current operator + (Current z){
+		Current s;
+		s.rel = rel + z.rel;
+		s.img = img + z.img;
+		return s;
+	}
+
+	Current operator * (Current z){
+		Current s;
+		s.rel = (this->rel * z.rel - this->img * z.img);
+		s.img = (this->rel * z.img + this->img * z.rel);
+		return s;
+	}
+
+	std::complex<double> getCurrent(){
+		I.real(rel);
+		I.imag(img);
+		return I;
+
+	}
+	void setcurrnt(std::complex<double> c)
+	{
+		I=c;
+		rel=I.real();
+		img=I.imag();
+	}
+
+
+
+};
 
 /////////////////////////
 ////	Component	////
@@ -202,48 +229,123 @@ public:
 	Impedance getZ(){ return z; }
 };
 
+class branch
+{
+public:
+	Impedance impBranch;
+	Voltage volt;
+	Current amb;
+	int node1;
+	int node2;
+	branch():impBranch(),volt(),amb()
+	{
+	}
+	void printinfo()
+	{
+		cout<<"Branch ( "<<node1<<" , "<<node2<<" )"<<endl;
+		cout<<"Impedance = ";
+		cout<<impBranch.getImpedance();
+		cout<<endl;
+		cout<<"Voltage = ";
+		cout<<volt.getVoltage();
+		cout<<endl;
+		cout<<"Current = ";
+		cout<<amb.getCurrent();
+		cout<<endl;
+	}
+	bool isv()
+	{
+		if(volt.rel==0 && volt.img==0)
+			return false;
+		else return true;
+	}
+	bool isimp()
+	{
+		if(impBranch.rel==0 && impBranch.img==0)
+			return false;
+		else return true;
+	}
+
+
+
+
+
+
+};
+
+
 bool isNonSimpleNode(int *arr, int n, int node);
 
 void analyseComp(Component* pComp, int n1, int n2);
 
+void nodeanalysis();
+void VoltToCurrent();
+
+
+
+
+branch B[10];
+int n_B=0;
 Impedance branchImp[10];				//	Contains The Impedance Of Each Branch
 Voltage branchVol[10];					//	Contains The Value Of The Voltage Source In Each Branch -->> if exist
 Current branchCrnt[10];					//	Contains The Value Of The Current Source In Each Branch -->> if exist
 int x = 0;								//	Index Of The Branch
-int numOfConnectedBranchesToNode[5];	//	ÇáÇÓã ÔÇÑÍ äÝÓå ååå
-
+int numOfConnectedBranchesToNode[5];	//	ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
+int nonSimpleNodes[6], numOfNonSimpNodes = 0;
 int main(){
 
 	Component* arr[10];
 	int num = 0;
 	
-	IndepVolSrc v1(12, 1000, 0, 0, 1);
+	IndepVolSrc v1(10, 1, -45, 0, 1);
 	double w = v1.getOmiga();
 	arr[num++] = &v1;
 
 	Resistor r1(3, 1, 2);
 	arr[num++] = &r1;
 
-	Inductor l1(0.002, w, 2, 3);
+	Inductor l1(1, w, 2, 3);
 	arr[num++] = &l1;
 
-	Resistor r2(4, 3, 4);
-	arr[num++] = &r2;
+	//Resistor r2(4, 3, 4);
+	//arr[num++] = &r2;
 
-	Inductor l2(0.003, w, 3, 5);
-	arr[num++] = &l2;
+	//Inductor l2(0.003, w, 3, 5);
+	//arr[num++] = &l2;
 
-	IndepVolSrc v2(6, 1000, 0, 0, 5);
+	IndepVolSrc v2(5, 1, -60, 0, 3);
 	arr[num++] = &v2;
 
-	Capacitor c1(0.0005, w, 4, 0);
+	Capacitor c1(1, w, 2, 0);
 	arr[num++] = &c1;
 
-	IndepCrntSrc i1(3, 1000, 10, 0, 4);
+	//IndepCrntSrc i1(3, 1000, 10, 0, 4);
+	//arr[num++] = &i1;
+
+	/*IndepVolSrc v1(10, 1000, 0, 0, 1);
+	double w = v1.getOmiga();
+	arr[num++] = &v1;
+
+	IndepCrntSrc i1(24.616, 1000, 70.26, 3, 0);
 	arr[num++] = &i1;
+
+	Resistor r1(20,1, 2);
+	arr[num++] = &r1;
+
+	Inductor l1(.01, 1000, 3, 4);
+	arr[num++] = &l1;
+
+	Capacitor c1(0.00005, 1000,  2, 3);
+	arr[num++] = &c1;
+
+	Resistor r2(20, 2, 0);
+	arr[num++] = &r2;
+
+	Resistor r3(30, 4, 0);
+	arr[num++] = &r3;*/
 	
 	//	Getting The Non-Simple Nodes
-	int nonSimpleNodes[6], numOfNonSimpNodes = 0;
+	
 	for(int i = 0; i < num; i++){
 		int n1, n2, n3, n4, repeatN1 = 0, repeatN2 = 0;
 		n1 = arr[i]->getNode1();
@@ -268,44 +370,57 @@ int main(){
 
 	int refNode = nonSimpleNodes[0];
 	
-	for(int i = 1; i < numOfNonSimpNodes; i++){
+	for(int i = 1; i < numOfNonSimpNodes; i++)
+	{
 
-		for(int j = 0; j < num; j++){
+		for(int j = 0; j < num; j++)
+		{
 			int n1 = arr[j]->getNode1();
 			int n2 = arr[j]->getNode2();
 			int startNode;
 
-			if(n2 == nonSimpleNodes[i]){
+			if(n2 == nonSimpleNodes[i])
+			{
+				B[n_B].node1=n2;
 				numOfConnectedBranchesToNode[i]++;
 				startNode = n1;
 				
 				analyseComp(arr[j], n1, n2);
 
-				while(!isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, startNode)){
+				while(!isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, startNode))
+				{
 					for(int k = 0; k < num; k++){
 						if(k == j)
 							continue;
 						n1 = arr[k]->getNode1();
 						n2 = arr[k]->getNode2();
-						if(startNode == n2){
+						if(startNode == n2)
+						{
 							startNode = n1;
 							analyseComp(arr[k], n1, n2);
 							break;
-						}else if(startNode == n1){
+						}
+						else if(startNode == n1)
+						{
 							startNode = n2;
 							analyseComp(arr[k], n1, n2);
 							break;
 						}
 					}
 				}
+				B[n_B++].node2=startNode;
 				x++;
-			}else if(n1 == nonSimpleNodes[i]){
+			}
+			else if(n1 == nonSimpleNodes[i])
+			{
+				B[n_B].node1=n1;
 				numOfConnectedBranchesToNode[i]++;
 				startNode = n2;
 				
 				analyseComp(arr[j], n1, n2);
 
-				while(!isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, startNode)){
+				while(!isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, startNode))
+				{
 					for(int k = 0; k < num; k++){
 						if(k == j)
 							continue;
@@ -322,78 +437,45 @@ int main(){
 						}
 					}
 				}
+				B[n_B++].node2=startNode;
 				x++;
 			}
 		}
 	}
+	VoltToCurrent();
 
-	//	Getting The Coefficient Matrix
-	Impedance coefficientMtrx[5][5] = {nul};
-	Current constVector[5] = {nul3};
-	int n;
+	for(int i = 0; i < numOfNonSimpNodes; i++)
+		cout << nonSimpleNodes[i] << endl;
+
+	cout << "\nImpedence\n";
+	for(int i = 0; i < x; i++){
+		cout << branchImp[i].getImpedance() << endl;
+	}
+	cout << "\nAdmittance\n";
+	for(int i = 0; i < x; i++){
+		cout << branchImp[i].getAdmittance() << endl;
+	}
+	cout << "\nCurrentSource\n";
+	for(int i = 0; i < x; i++){
+		cout << branchCrnt[i].getCurrent() << endl;
+	}
+	cout << "VoltageSource\n";
+	for(int i = 0; i < x; i++){
+		cout << branchVol[i].getVoltage() << endl;
+	}
 
 	for(int i = 1; i < numOfNonSimpNodes; i++){
-		Impedance diagAdmitt;
-		Current sumCrnt;
-		
-		if(i > 1)
-			n += numOfConnectedBranchesToNode[i];
-		else
-			n = numOfConnectedBranchesToNode[i];
-
-		for(static int j = 0; j < n; j++){
-			diagAdmitt = diagAdmitt + branchImp[j].getAdmittance();
-			sumCrnt = sumCrnt + branchCrnt[j] + (branchVol[j]/branchImp[j]);
-
-			int index1 = i - 1;
-			for(int f = 0; f < j; f++){
-				if(branchImp[j] == branchImp[f]){
-					int limit = n - numOfConnectedBranchesToNode[index1];
-					
-					while(index1 >= 0){
-						if(f < limit){
-							Impedance commonAdmitt = branchImp[f].getAdmittance();
-							coefficientMtrx[i-1][index1-1].rel += -1 * commonAdmitt.rel;
-							coefficientMtrx[i-1][index1-1].img += -1 * commonAdmitt.img;
-						}
-						index1--;
-						limit -= numOfConnectedBranchesToNode[index1];
-					}					
-				}
-			}
-
-			int index2 = i + 1;
-			for(int g = n; g < x; g++){
-				if(branchImp[j] == branchImp[g]){
-					int limit = numOfConnectedBranchesToNode[index2] + n;
-					
-					while(index2 < numOfNonSimpNodes){
-						if(g < limit){
-							Impedance commonAdmitt = branchImp[g].getAdmittance();
-							coefficientMtrx[i-1][index2-1].rel += -1 * commonAdmitt.rel;
-							coefficientMtrx[i-1][index2-1].img += -1 * commonAdmitt.img;
-						}
-						index2++;
-						limit += numOfConnectedBranchesToNode[index2];
-					}					
-				}
-			}
-		}
-		
-		coefficientMtrx[i-1][i-1] = diagAdmitt;		//	Main Diagonal In Coefficient Matrix
-		constVector[i-1] = sumCrnt;					//	Vector Of Current
+		cout << numOfConnectedBranchesToNode[i] << endl;
 	}
 
-
-	//	Testing
-	for(int i = 0; i < numOfNonSimpNodes-1; i++){
-		for(int j = 0; j < numOfNonSimpNodes-1; j++){
-			cout << "(" << coefficientMtrx[i][j].rel << ", " << coefficientMtrx[i][j].img << ")\t";
-		}
-		cout << "||\t(" << constVector[i].rel << ", " << constVector[i].img << ")";
-		cout << endl;
+	/*for(int i=0 ;i<numOfConnectedBranchesToNode[2];i++)
+		cout << branchImp[i+3].getImpedance() << endl;*/
+	for(int i=0;i<n_B;i++)
+	{
+		B[i].printinfo();
+		cout<<endl;
 	}
-
+	nodeanalysis();
 	system("pause");
 	return 0;
 }
@@ -410,30 +492,108 @@ void analyseComp(Component* pComp, int n1, int n2){
 	if(dynamic_cast<Resistor*>(pComp) != NULL){
 		Resistor* r = dynamic_cast<Resistor*>(pComp);
 		branchImp[x] = branchImp[x] + r->getZ();
+		B[n_B].impBranch=branchImp[x];
+		
 	}
 	else if(dynamic_cast<Capacitor*>(pComp) != NULL){
 		Capacitor* c = dynamic_cast<Capacitor*>(pComp);
 		branchImp[x] = branchImp[x] + c->getZ();
+		B[n_B].impBranch=branchImp[x];
 	}
 	else if(dynamic_cast<Inductor*>(pComp) != NULL){
 		Inductor* l = dynamic_cast<Inductor*>(pComp);
 		branchImp[x] = branchImp[x] + l->getZ();
+		B[n_B].impBranch=branchImp[x];
 	}
 	else if(dynamic_cast<IndepVolSrc*>(pComp) != NULL){
 		IndepVolSrc* v = dynamic_cast<IndepVolSrc*>(pComp);
-		branchVol[x].rel = v->getVmax()*cos(v->getPhi() * (22/7)/180);
-		branchVol[x].img = v->getVmax()*sin(v->getPhi() * (22/7)/180);
+		branchVol[x].rel = v->getVmax()*cos(v->getPhi() * (22.0/7)/180);
+		branchVol[x].img = v->getVmax()*sin(v->getPhi() * (22.0/7)/180);
+		B[n_B].volt.rel=branchVol[x].rel;
+		B[n_B].volt.img=branchVol[x].img;
+		
 		if(n1 > n2){
 			branchVol[x].rel *= -1;
 			branchVol[x].img *= -1;
+			B[n_B].volt.rel=branchVol[x].rel;
+			B[n_B].volt.img=branchVol[x].img;
 		}
 	}else{
 		IndepCrntSrc* v = dynamic_cast<IndepCrntSrc*>(pComp);
-		branchCrnt[x].rel = v->getImax()*cos(v->getPhi() * (22/7)/180);
-		branchCrnt[x].img = v->getImax()*sin(v->getPhi() * (22/7)/180);
+		branchCrnt[x].rel = v->getImax()*cos(v->getPhi() * (22.0/7.0)/180.0);
+		branchCrnt[x].img = v->getImax()*sin(v->getPhi() * (22.0/7.0)/180.0);
+		B[n_B].amb.rel=branchCrnt[x].rel;
+		B[n_B].amb.img=branchCrnt[x].img;
 		if(n1 > n2){
 			branchCrnt[x].rel *= -1;
 			branchCrnt[x].img *= -1;
+			B[n_B].amb.rel=branchCrnt[x].rel;
+			B[n_B].amb.img=branchCrnt[x].img;
 		}
 	}
+}
+
+
+void nodeanalysis()
+{
+	int n=numOfNonSimpNodes-1;
+	Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> y(n, n);
+	y.setZero();
+	Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> cu(n, 1);
+	cu.setZero();
+	Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> R(n, 1);
+	R.setZero();
+	for(int i=1; i<numOfNonSimpNodes;i++)
+	{
+		for(int j=0;j<n_B;j++)
+		{
+			if(B[j].node1==nonSimpleNodes[i] && B[j].node2==0)
+			{
+				if(B[j].isimp())
+					y(i-1,i-1)=y(i-1,i-1)+1.0/B[j].impBranch.getImpedance();
+				cu(i-1,0)=cu(i-1,0)+B[j].amb.getCurrent();
+			}
+			else if(B[j].node1==nonSimpleNodes[i] && B[j].node2!=0)
+			{
+				for(int k=1; k<numOfNonSimpNodes; k++)
+				{
+					if(B[j].node2==nonSimpleNodes[k] && i!=k)
+					{
+						if(B[j].isimp())
+							y(i-1,i-1)=y(i-1,i-1)+1.0/B[j].impBranch.getImpedance();
+							y(i-1,k-1)=y(i-1,k-1)-1.0/B[j].impBranch.getImpedance();
+						cu(i-1,0)=cu(i-1,0)+B[j].amb.getCurrent();
+					}
+
+				}
+
+			}
+
+		}
+
+	}
+	R=y.inverse()*cu;
+	cout<<y<<endl<<endl;
+	cout<<cu<<endl<<endl;
+	for(int i=1;i<numOfNonSimpNodes;i++)
+		cout<<"V"<<nonSimpleNodes[i]<<" = "<<R(i-1,0)<<endl;
+
+}
+
+void VoltToCurrent()
+{
+	for(int i=0; i<n_B ;i++)
+	{
+		if(B[i].isv())
+		{
+			B[n_B].node1=B[i].node1;
+			B[n_B].node2=B[i].node2;
+			B[n_B].amb.setcurrnt(B[i].volt.getVoltage()/B[i].impBranch.getImpedance());
+			n_B++;
+			B[i].volt.rel=0;
+			B[i].volt.img=0;
+		}
+
+	}
+
 }
