@@ -168,12 +168,14 @@ public:
 ////	Independent Voltage Source	////
 ///////////////////////////////////////
 class IndepVolSrc : public Component{
+protected:
 	double Vmax;
 	double phi;
 	double angularFreq;
 
 public:
 	IndepVolSrc(double v, double w, double a, int n1, int n2) : Component(n1, n2){ Vmax = v;	angularFreq = w;		phi = a; }
+	IndepVolSrc(int n1, int n2): Component(n1, n2){ }
 	double getVmax(){ return Vmax; }
 	double getPhi(){ return phi; }
 	double getOmiga(){ return angularFreq; }
@@ -181,19 +183,65 @@ public:
 };
 
 /////////////////////////////////////////
+////	Dependent Voltage Source	////
+///////////////////////////////////////
+class DepVolSrc : public IndepVolSrc{
+	double coeff;
+	int depN1, depN2;				//	Node1 & Node2 of The Source We Depend On
+public:
+	DepVolSrc(double c, int compN1, int compN2, int depN1, int depN2) : IndepVolSrc(depN1, depN2){
+		coeff = c;
+		this->depN1 = depN1;
+		this->depN2 = depN2;
+	}
+
+	int getDepN1(){ return depN1; }
+	int getDepN2(){ return depN2; }
+	void setSrc(double Vm, double angle, double w){
+		Vmax = (Vm > 0)? coeff*Vm : -coeff*Vm;
+		phi = angle;
+		angularFreq = w;
+	}
+};
+
+/////////////////////////////////////////
 ////	Independent Current Source	////
 ///////////////////////////////////////
 class IndepCrntSrc : public Component{
+protected:
 	double Imax;
 	double phi;
 	double angularFreq;
 
 public:
 	IndepCrntSrc(double i, double w, double a, int n1, int n2) : Component(n1, n2){ Imax = i;	angularFreq = w;	phi = a; }
+	IndepCrntSrc(int n1, int n2): Component(n1, n2){ }
 	double getImax(){ return Imax; }
 	double getPhi(){ return phi; }
 	double getOmiga(){ return angularFreq; }
 	Impedance getZ(){ return nul; }
+};
+
+/////////////////////////////////////////
+////	Dependent Current Source	////
+///////////////////////////////////////
+class DepCrntSrc : public IndepCrntSrc{
+	double coeff;
+	int depN1, depN2;				//	Node1 & Node2 of The Source We Depend On
+public:
+	DepCrntSrc(double c, int compN1, int compN2, int depN1, int depN2) : IndepCrntSrc(depN1, depN2){
+		coeff = c;
+		this->depN1 = depN1;
+		this->depN2 = depN2;
+	}
+
+	int getDepN1(){ return depN1; }
+	int getDepN2(){ return depN2; }
+	void setSrc(double Im, double angle, double w){
+		Imax = (Im > 0)? coeff*Im : -coeff*Im;
+		phi = angle;
+		angularFreq = w;
+	}
 };
 
 /////////////////////////
@@ -270,14 +318,30 @@ public:
 struct nonsimpleknown
 {
 	int node;
-	complex<double> value;
+	Voltage vb;
+	int n;
 	nonsimpleknown()
 	{
 		node=-1;
-		int value=0;
+		vb.img=0;
+		vb.rel=0;
+		n=0;
 	}
 
 };
+
+struct nonsimplnode
+{
+	int node;
+	int index;
+	nonsimplnode()
+	{
+		node=0;
+		index=0;
+	}
+
+};
+
 
 void deletenode(int);
 
@@ -297,14 +361,12 @@ void analyseComp(Component* pComp, int n1, int n2);
 void nodeanalysis();
 void VoltToCurrent();
 
-void LoadInputFile(Component*[], int&, string);
-
-class FILE_NOT_FOUND {};
-
-
 
 nonsimpleknown nonSknown[5];
 int num_nonSknown=0;
+
+nonsimplnode nsnode[6];
+int n_nsnode=0;
 
 branch B[20];
 int n_B=0;
@@ -319,45 +381,24 @@ int main(){
 	Component* arr[10];
 	int num = 0;
 
-	string InputFileName;
-	while (true)
-	{
-		cout << "Please, enter the name of the file to " << endl;;
-		cin >> InputFileName;
-		try
-		{
-			LoadInputFile(arr, num, InputFileName);
-			break;
-		}
-		catch (FILE_NOT_FOUND)
-		{
-			cout << "file not found"<<endl;
-		}
-	}
+	
+	IndepCrntSrc i1(2,0,0,0,1);
+	arr[num++]= &i1;
 
+	Resistor r1(2,0,1);
+	arr[num++]= &r1;
 
+	IndepVolSrc v1(2,0,0,1,2);
+	arr[num++]= &v1;
 
+	Resistor r2(10,1,2);
+	arr[num++]= &r2;
 
+	Resistor r3(4,2,0);
+	arr[num++]= &r3;
 
-//	IndepCrntSrc i1(2,0,0,0,1);
-//	arr[num++]=&i1;
-
-//	Resistor r1(2,0,1);
-	//arr[num++]=&r1;
-
-	//IndepVolSrc v1(2,0,0,1,2);
-//	arr[num++]=&v1;
-
-//	Resistor r2(10,1,2);
-//	arr[num++]=&r2;
-
-//	Resistor r3(4,2,0);
-//	arr[num++]=&r3;
-
-//	IndepCrntSrc i2(7,0,0,2,0);
-//	arr[num++]=&i2;
-
-
+	IndepCrntSrc i2(7,0,0,2,0);
+	arr[num++]= &i2;
 
 
 
@@ -382,6 +423,34 @@ int main(){
 		if(repeatN2 > 2){
 			if(!isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, n2))
 				nonSimpleNodes[numOfNonSimpNodes++] = n2;
+		}
+
+		//	Setting The Dependant Sources
+		if(dynamic_cast<DepVolSrc*>(arr[i]) != NULL){
+			DepVolSrc* v = dynamic_cast<DepVolSrc*>(arr[i]);
+			int depN1 = v->getDepN1(),
+				depN2 = v->getDepN2();
+
+			for(int k = 0; k < num; k++){
+				if(((arr[k]->getNode1() == depN1 && arr[k]->getNode2() == depN2) || (arr[k]->getNode1() == depN2 && arr[k]->getNode2() == depN1)) && dynamic_cast<IndepVolSrc*>(arr[k]) != NULL){
+					IndepVolSrc* v2 = dynamic_cast<IndepVolSrc*>(arr[k]);
+					v->setSrc(v2->getVmax(), v2->getPhi(), v2->getOmiga());
+					break;
+				}
+			}
+		}
+		if(dynamic_cast<DepCrntSrc*>(arr[i]) != NULL){
+			DepCrntSrc* crnt = dynamic_cast<DepCrntSrc*>(arr[i]);
+			int depN1 = crnt->getDepN1(),
+				depN2 = crnt->getDepN2();
+
+			for(int k = 0; k < num; k++){
+				if(((arr[k]->getNode1() == depN1 && arr[k]->getNode2() == depN2) || (arr[k]->getNode1() == depN2 && arr[k]->getNode2() == depN1)) && dynamic_cast<IndepCrntSrc*>(arr[k]) != NULL){
+					IndepCrntSrc* crnt2 = dynamic_cast<IndepCrntSrc*>(arr[k]);
+					crnt->setSrc(crnt2->getImax(), crnt2->getPhi(), crnt2->getOmiga());
+					break;
+				}
+			}
 		}
 	}
 
@@ -493,6 +562,14 @@ int main(){
 		B[i].printinfo();
 		cout<<endl;
 	}
+
+	for(int i=0; i<numOfNonSimpNodes; i++)
+	{
+		nsnode[n_nsnode].node=nonSimpleNodes[i];
+		nsnode[n_nsnode].index=i;
+	}
+
+
 	nodeanalysis();
 	system("pause");
 	return 0;
@@ -609,19 +686,43 @@ void nodeanalysis()
 		}
 	
 	}
-	int i=0; int k=0; complex<double> e;
-	if(supernode(i,k,e))
-	{	
-		y.row(i-1)=y.row(i-1)+y.row(k-1);
-		y.row(k-1).setZero();
-		cu.row(i-1)=cu.row(i-1)+cu.row(k-1);
-		cu.row(k-1).setZero();
-		y(k-1,k-1)=-1;
-		y(k-1,1+k-i-2)=1;
-		cu(k-1,0)=e;
+	
+	voltknown();
+	for( int t=0 ;t<num_nonSknown; t++)
+	{
+		int m=nonSknown[t].n;
+		cu.col(0).array()-=y.col(m-1).array();
+		cu.col(0).array()*=nonSknown[t].vb.getVoltage();
+		y.col(m-1).setZero();
+		y.row(m-1).setZero();
+		y(m-1,m-1)=1;
+		cu(m-1,0)=nonSknown[t].vb.getVoltage();
 
+		
 	}
+	
+	{
+		int i=0; int k=0; complex<double> e;
+		if(supernode(i,k,e))
+		{	
+			y.row(i-1)=y.row(i-1)+y.row(k-1);
+			y.row(k-1).setZero();
+			cu.row(i-1)=cu.row(i-1)+cu.row(k-1);
+			cu.row(k-1).setZero();
+			y(k-1,k-1)=1;
+			if(k<i)
+			{
+				y(k-1,i-1)=-1;
+				cu(k-1,0)=e;	
+			}
+			else
+			{
+				y(k-1,i-1)=-1;
+				cu(k-1,0)=-e;
+			}
 
+		}
+	}
 	
 
 
@@ -666,9 +767,10 @@ void voltknown()
 			if( B[j].node1==nonSimpleNodes[i]  && B[j].node2==0 && !B[j].isimp() && B[j].isv())
 			{
 				nonSknown[num_nonSknown].node=B[j].node1;
-				nonSknown[num_nonSknown].value=B[j].volt.getVoltage();
+				nonSknown[num_nonSknown].n=i;
+				nonSknown[num_nonSknown].vb=B[j].volt;
 				num_nonSknown++;
-				nonSimpleNodes[i]=0;
+				/*nonSimpleNodes[i]=0;
 				for(int k=i; k<5 ;k++)
 				{
 					if(nonSimpleNodes[k+1]!=0)
@@ -678,7 +780,7 @@ void voltknown()
 					}
 
 				}
-				numOfNonSimpNodes--;
+				numOfNonSimpNodes--;*/
 
 			}
 
@@ -721,8 +823,8 @@ bool supernode( int& p , int& q , complex<double>& c)
 							p=i;
 							q=k;
 							c=B[j].volt.getVoltage();
-							deletenode(i);
-							deletenode(k);
+							/*deletenode(i);
+							deletenode(k);*/
 							return true;
 						}
 
@@ -734,66 +836,4 @@ bool supernode( int& p , int& q , complex<double>& c)
 		}
 	}
 	return false;
-}
-void LoadInputFile(Component* arr[], int &N,string FileName)
-{
-	ifstream InputFile("Input\\" + FileName + ".txt");
-	if (InputFile.is_open())
-	{
-		string ComponentType;
-		string ComponentName;
-		int  n1, n2;
-		double value, phi;
-		int Omega = 0;
-		while (!InputFile.eof())
-		{
-			InputFile >> ComponentType;
-
-			if (ComponentType == "w")
-			{
-				InputFile >> value;
-				Omega = value;
-			}
-			else if (ComponentType == "res")
-			{
-				InputFile >> ComponentName >> n1 >> n2 >> value;
-				arr[N++] = new Resistor(value, n1, n2);
-			}
-			else if (ComponentType == "vsrc")
-			{
-				InputFile >> ComponentName >> n1 >> n2 >> value >> phi;
-				arr[N++] = new IndepVolSrc(value, Omega, phi, n1, n2);
-			}
-			else if (ComponentType == "isrc")
-			{
-				InputFile >> ComponentName >> n1 >> n2 >> value >> phi;
-				arr[N++] = new IndepCrntSrc(value, Omega, phi, n1, n2);
-			}
-			else if (ComponentType == "vcvs")
-			{
-				cout << "voltage controlled voltage source" << endl;
-			}
-			else if (ComponentType == "cccs")
-			{
-				cout << "current controlled current source" << endl;
-			}
-			else if (ComponentType == "cap")
-			{
-				InputFile >> ComponentName >> n1 >> n2 >> value;
-				arr[N++] = new Capacitor(value, Omega, n1, n2);
-			}
-			else if (ComponentType == "ind")
-			{
-				InputFile >> ComponentName >> n1 >> n2 >> value;
-				arr[N++] = new Inductor(value, Omega, n1, n2);
-			}
-			else if (ComponentType == "-1")
-			{
-				InputFile.close();
-				break;
-			}
-		}
-	}
-	else
-		throw FILE_NOT_FOUND ();
 }
