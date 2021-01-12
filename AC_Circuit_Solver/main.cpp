@@ -281,7 +281,9 @@ void analyseComp(Component* pComp, int n1, int n2);
 void nodeanalysis();
 void VoltToCurrent();
 
+void LoadInputFile(Component*[], int&, string);
 
+class FILE_NOT_FOUND {};
 
 
 branch B[10];
@@ -293,19 +295,34 @@ int x = 0;								//	Index Of The Branch
 int numOfConnectedBranchesToNode[5];	//	����� ���� ���� ���
 int nonSimpleNodes[6], numOfNonSimpNodes = 0;
 int main(){
-
 	Component* arr[10];
 	int num = 0;
+	string InputFileName;
+	while (true)
+	{
+		cout << "Please, enter the name of the file to " << endl;;
+		cin >> InputFileName;
+		try
+		{
+			LoadInputFile(arr, num, InputFileName);
+			break;
+		}
+		catch (FILE_NOT_FOUND)
+		{
+			cout << "file not found"<<endl;
+		}
+	}
 	
-	IndepVolSrc v1(10, 1, -45, 0, 1);
-	double w = v1.getOmiga();
-	arr[num++] = &v1;
+	
+	//IndepVolSrc v1(10, 1, -45, 0, 1);
+	//double w = v1.getOmiga();
+	//arr[num++] = &v1;
 
-	Resistor r1(3, 1, 2);
-	arr[num++] = &r1;
+	//Resistor r1(3, 1, 2);
+	//arr[num++] = &r1;
 
-	Inductor l1(1, w, 2, 3);
-	arr[num++] = &l1;
+	//Inductor l1(1, w, 2, 3);
+	//arr[num++] = &l1;
 
 	//Resistor r2(4, 3, 4);
 	//arr[num++] = &r2;
@@ -313,11 +330,11 @@ int main(){
 	//Inductor l2(0.003, w, 3, 5);
 	//arr[num++] = &l2;
 
-	IndepVolSrc v2(5, 1, -60, 0, 3);
-	arr[num++] = &v2;
+	//IndepVolSrc v2(5, 1, -60, 0, 3);
+	//arr[num++] = &v2;
 
-	Capacitor c1(1, w, 2, 0);
-	arr[num++] = &c1;
+	//Capacitor c1(1, w, 2, 0);
+	//arr[num++] = &c1;
 
 	//IndepCrntSrc i1(3, 1000, 10, 0, 4);
 	//arr[num++] = &i1;
@@ -596,4 +613,64 @@ void VoltToCurrent()
 
 	}
 
+}
+
+void LoadInputFile(Component* arr[], int &N,string FileName)
+{
+	ifstream InputFile("Input\\" + FileName + ".txt");
+	if (InputFile.is_open())
+	{
+		string ComponentType;
+		string ComponentName;
+		int  n1, n2;
+		double value, phi;
+		int Omega = 0;
+		while (!InputFile.eof())
+		{
+			InputFile >> ComponentType;
+
+			if (ComponentType == "w")
+			{
+				InputFile >> value;
+				Omega = value;
+			}
+			else if (ComponentType == "res")
+			{
+				InputFile >> ComponentName >> n1 >> n2 >> value;
+				arr[N++] = new Resistor(value, n1, n2);
+			}
+			else if (ComponentType == "vsrc")
+			{
+				InputFile >> ComponentName >> n1 >> n2 >> value >> phi;
+				arr[N++] = new IndepVolSrc(value, Omega, phi, n1, n2);
+			}
+			else if (ComponentType == "isrc")
+			{
+				InputFile >> ComponentName >> n1 >> n2 >> value >> phi;
+				arr[N++] = new IndepCrntSrc(value, Omega, phi, n1, n2);
+			}
+			else if (ComponentType == "vcvs")
+			{
+				cout << "voltage controlled voltage source" << endl;
+			}
+			else if (ComponentType == "cccs")
+			{
+				cout << "current controlled current source" << endl;
+			}
+			else if (ComponentType == "cap")
+			{
+				InputFile >> ComponentName >> n1 >> n2 >> value;
+				arr[N++] = new Capacitor(value, Omega, n1, n2);
+			}
+			else if (ComponentType == "ind")
+			{
+				InputFile >> ComponentName >> n1 >> n2 >> value;
+				arr[N++] = new Inductor(value, Omega, n1, n2);
+			}
+			else if (ComponentType == "-1")
+				break;
+		}
+	}
+	else
+		throw FILE_NOT_FOUND ();
 }
