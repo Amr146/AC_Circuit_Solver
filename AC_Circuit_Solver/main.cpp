@@ -288,6 +288,8 @@ void voltknown();
 bool supernode(int& , int&, complex<double>&);
 
 
+
+
 bool isNonSimpleNode(int *arr, int n, int node);
 
 void analyseComp(Component* pComp, int n1, int n2);
@@ -299,11 +301,12 @@ void LoadInputFile(Component*[], int&, string);
 
 class FILE_NOT_FOUND {};
 
+
+
 nonsimpleknown nonSknown[5];
 int num_nonSknown=0;
 
-
-branch B[10];
+branch B[20];
 int n_B=0;
 Impedance branchImp[10];				//	Contains The Impedance Of Each Branch
 Voltage branchVol[10];					//	Contains The Value Of The Voltage Source In Each Branch -->> if exist
@@ -312,8 +315,10 @@ int x = 0;								//	Index Of The Branch
 int numOfConnectedBranchesToNode[5];	//	����� ���� ���� ���
 int nonSimpleNodes[6], numOfNonSimpNodes = 0;
 int main(){
+
 	Component* arr[10];
 	int num = 0;
+
 	string InputFileName;
 	while (true)
 	{
@@ -329,9 +334,33 @@ int main(){
 			cout << "file not found"<<endl;
 		}
 	}
-	
-	
-	
+
+
+
+
+
+//	IndepCrntSrc i1(2,0,0,0,1);
+//	arr[num++]=&i1;
+
+//	Resistor r1(2,0,1);
+	//arr[num++]=&r1;
+
+	//IndepVolSrc v1(2,0,0,1,2);
+//	arr[num++]=&v1;
+
+//	Resistor r2(10,1,2);
+//	arr[num++]=&r2;
+
+//	Resistor r3(4,2,0);
+//	arr[num++]=&r3;
+
+//	IndepCrntSrc i2(7,0,0,2,0);
+//	arr[num++]=&i2;
+
+
+
+
+
 	//	Getting The Non-Simple Nodes
 	
 	for(int i = 0; i < num; i++){
@@ -706,8 +735,6 @@ bool supernode( int& p , int& q , complex<double>& c)
 	}
 	return false;
 }
-
-
 void LoadInputFile(Component* arr[], int &N,string FileName)
 {
 	ifstream InputFile("Input\\" + FileName + ".txt");
