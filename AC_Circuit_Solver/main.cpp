@@ -668,7 +668,10 @@ void LoadInputFile(Component* arr[], int &N,string FileName)
 				arr[N++] = new Inductor(value, Omega, n1, n2);
 			}
 			else if (ComponentType == "-1")
+			{
+				InputFile.close();
 				break;
+			}
 		}
 	}
 	else
