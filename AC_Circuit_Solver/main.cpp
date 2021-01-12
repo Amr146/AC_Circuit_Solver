@@ -265,13 +265,27 @@ public:
 			return false;
 		else return true;
 	}
+};
 
-
-
-
-
+struct nonsimpleknown
+{
+	int node;
+	complex<double> value;
+	nonsimpleknown()
+	{
+		node=-1;
+		int value=0;
+	}
 
 };
+
+void deletenode(int);
+
+
+
+void voltknown();
+
+bool supernode(int& , int&, complex<double>&);
 
 
 bool isNonSimpleNode(int *arr, int n, int node);
@@ -284,6 +298,9 @@ void VoltToCurrent();
 void LoadInputFile(Component*[], int&, string);
 
 class FILE_NOT_FOUND {};
+
+nonsimpleknown nonSknown[5];
+int num_nonSknown=0;
 
 
 branch B[10];
@@ -314,52 +331,6 @@ int main(){
 	}
 	
 	
-	//IndepVolSrc v1(10, 1, -45, 0, 1);
-	//double w = v1.getOmiga();
-	//arr[num++] = &v1;
-
-	//Resistor r1(3, 1, 2);
-	//arr[num++] = &r1;
-
-	//Inductor l1(1, w, 2, 3);
-	//arr[num++] = &l1;
-
-	//Resistor r2(4, 3, 4);
-	//arr[num++] = &r2;
-
-	//Inductor l2(0.003, w, 3, 5);
-	//arr[num++] = &l2;
-
-	//IndepVolSrc v2(5, 1, -60, 0, 3);
-	//arr[num++] = &v2;
-
-	//Capacitor c1(1, w, 2, 0);
-	//arr[num++] = &c1;
-
-	//IndepCrntSrc i1(3, 1000, 10, 0, 4);
-	//arr[num++] = &i1;
-
-	/*IndepVolSrc v1(10, 1000, 0, 0, 1);
-	double w = v1.getOmiga();
-	arr[num++] = &v1;
-
-	IndepCrntSrc i1(24.616, 1000, 70.26, 3, 0);
-	arr[num++] = &i1;
-
-	Resistor r1(20,1, 2);
-	arr[num++] = &r1;
-
-	Inductor l1(.01, 1000, 3, 4);
-	arr[num++] = &l1;
-
-	Capacitor c1(0.00005, 1000,  2, 3);
-	arr[num++] = &c1;
-
-	Resistor r2(20, 2, 0);
-	arr[num++] = &r2;
-
-	Resistor r3(30, 4, 0);
-	arr[num++] = &r3;*/
 	
 	//	Getting The Non-Simple Nodes
 	
@@ -460,6 +431,7 @@ int main(){
 		}
 	}
 	VoltToCurrent();
+	//voltknown();
 
 	for(int i = 0; i < numOfNonSimpNodes; i++)
 		cout << nonSimpleNodes[i] << endl;
@@ -526,26 +498,41 @@ void analyseComp(Component* pComp, int n1, int n2){
 		IndepVolSrc* v = dynamic_cast<IndepVolSrc*>(pComp);
 		branchVol[x].rel = v->getVmax()*cos(v->getPhi() * (22.0/7)/180);
 		branchVol[x].img = v->getVmax()*sin(v->getPhi() * (22.0/7)/180);
-		B[n_B].volt.rel=branchVol[x].rel;
-		B[n_B].volt.img=branchVol[x].img;
+		if(B[n_B].node1==n2)
+		{
+			B[n_B].volt.rel=branchVol[x].rel;
+			B[n_B].volt.img=branchVol[x].img;
+		}
+		else
+		{
+			B[n_B].volt.rel=-branchVol[x].rel;
+			B[n_B].volt.img=-branchVol[x].img;
+		}
 		
 		if(n1 > n2){
 			branchVol[x].rel *= -1;
 			branchVol[x].img *= -1;
-			B[n_B].volt.rel=branchVol[x].rel;
-			B[n_B].volt.img=branchVol[x].img;
 		}
 	}else{
 		IndepCrntSrc* v = dynamic_cast<IndepCrntSrc*>(pComp);
 		branchCrnt[x].rel = v->getImax()*cos(v->getPhi() * (22.0/7.0)/180.0);
 		branchCrnt[x].img = v->getImax()*sin(v->getPhi() * (22.0/7.0)/180.0);
-		B[n_B].amb.rel=branchCrnt[x].rel;
-		B[n_B].amb.img=branchCrnt[x].img;
-		if(n1 > n2){
-			branchCrnt[x].rel *= -1;
-			branchCrnt[x].img *= -1;
+		if(B[n_B].node1==n2)
+		{
 			B[n_B].amb.rel=branchCrnt[x].rel;
 			B[n_B].amb.img=branchCrnt[x].img;
+		}
+		else
+		{
+			B[n_B].amb.rel=-branchCrnt[x].rel;
+			B[n_B].amb.img=-branchCrnt[x].img;
+		}
+
+		if(n1 > n2)
+		{
+			branchCrnt[x].rel *= -1;
+			branchCrnt[x].img *= -1;
+			
 		}
 	}
 }
@@ -572,13 +559,17 @@ void nodeanalysis()
 			}
 			else if(B[j].node1==nonSimpleNodes[i] && B[j].node2!=0)
 			{
+				
+
 				for(int k=1; k<numOfNonSimpNodes; k++)
 				{
 					if(B[j].node2==nonSimpleNodes[k] && i!=k)
 					{
-						if(B[j].isimp())
+					 if(B[j].isimp())
+						{
 							y(i-1,i-1)=y(i-1,i-1)+1.0/B[j].impBranch.getImpedance();
 							y(i-1,k-1)=y(i-1,k-1)-1.0/B[j].impBranch.getImpedance();
+						}
 						cu(i-1,0)=cu(i-1,0)+B[j].amb.getCurrent();
 					}
 
@@ -587,13 +578,31 @@ void nodeanalysis()
 			}
 
 		}
+	
+	}
+	int i=0; int k=0; complex<double> e;
+	if(supernode(i,k,e))
+	{	
+		y.row(i-1)=y.row(i-1)+y.row(k-1);
+		y.row(k-1).setZero();
+		cu.row(i-1)=cu.row(i-1)+cu.row(k-1);
+		cu.row(k-1).setZero();
+		y(k-1,k-1)=-1;
+		y(k-1,1+k-i-2)=1;
+		cu(k-1,0)=e;
 
 	}
+
+	
+
+
+
+
 	R=y.inverse()*cu;
 	cout<<y<<endl<<endl;
 	cout<<cu<<endl<<endl;
-	for(int i=1;i<numOfNonSimpNodes;i++)
-		cout<<"V"<<nonSimpleNodes[i]<<" = "<<R(i-1,0)<<endl;
+	cout<<R<<endl<<endl;
+	
 
 }
 
@@ -601,11 +610,14 @@ void VoltToCurrent()
 {
 	for(int i=0; i<n_B ;i++)
 	{
-		if(B[i].isv())
+		if(B[i].isv() && B[i].isimp())
 		{
 			B[n_B].node1=B[i].node1;
 			B[n_B].node2=B[i].node2;
-			B[n_B].amb.setcurrnt(B[i].volt.getVoltage()/B[i].impBranch.getImpedance());
+			if ( B[n_B].node1 > B[n_B].node2 )
+				B[n_B].amb.setcurrnt(B[i].volt.getVoltage()/B[i].impBranch.getImpedance());
+			else 
+				B[n_B].amb.setcurrnt(-B[i].volt.getVoltage()/B[i].impBranch.getImpedance());
 			n_B++;
 			B[i].volt.rel=0;
 			B[i].volt.img=0;
@@ -614,6 +626,87 @@ void VoltToCurrent()
 	}
 
 }
+
+
+void voltknown()
+{
+	for(int i=1; i<6 ; i++)
+	{
+		for (int j=0 ; j<n_B ;j++)
+		{
+			if( B[j].node1==nonSimpleNodes[i]  && B[j].node2==0 && !B[j].isimp() && B[j].isv())
+			{
+				nonSknown[num_nonSknown].node=B[j].node1;
+				nonSknown[num_nonSknown].value=B[j].volt.getVoltage();
+				num_nonSknown++;
+				nonSimpleNodes[i]=0;
+				for(int k=i; k<5 ;k++)
+				{
+					if(nonSimpleNodes[k+1]!=0)
+					{
+						nonSimpleNodes[k]=nonSimpleNodes[k+1];
+						nonSimpleNodes[k+1]=0;
+					}
+
+				}
+				numOfNonSimpNodes--;
+
+			}
+
+		}
+
+	}
+
+}
+
+
+void deletenode( int i)
+{
+	nonSimpleNodes[i]=0;
+	for(int k=i; k<5 ;k++)
+	{
+		if(nonSimpleNodes[k+1]!=0)
+		{
+			nonSimpleNodes[k]=nonSimpleNodes[k+1];
+			nonSimpleNodes[k+1]=0;
+		}
+
+	}
+	numOfNonSimpNodes--;
+}
+
+bool supernode( int& p , int& q , complex<double>& c)
+{
+	for(int i=1; i<numOfNonSimpNodes; i++)
+	{
+		for(int j=0;j<n_B;j++)
+		{
+			if(B[j].node1==nonSimpleNodes[i] && B[j].node2!=0)
+			{
+				for(int k=1; k<numOfNonSimpNodes; k++)
+				{
+					if(B[j].node2==nonSimpleNodes[k] && i!=k)
+					{
+						if(!B[j].isimp() && B[j].isv())
+						{
+							p=i;
+							q=k;
+							c=B[j].volt.getVoltage();
+							deletenode(i);
+							deletenode(k);
+							return true;
+						}
+
+					}
+
+				}
+
+			}
+		}
+	}
+	return false;
+}
+
 
 void LoadInputFile(Component* arr[], int &N,string FileName)
 {
