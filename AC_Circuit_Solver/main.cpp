@@ -179,14 +179,19 @@ protected:
 	double Vmax;
 	double phi;
 	double angularFreq;
-
+	Voltage value;
 public:
-	IndepVolSrc(double v, double w, double a, int n1, int n2) : Component(n1, n2){ Vmax = v;	angularFreq = w;		phi = a; }
+	IndepVolSrc(double v, double w, double a, int n1, int n2) : Component(n1, n2), value() 
+	{ Vmax = v;	angularFreq = w;		phi = a; 
+	value.rel +=getVmax() * cos(getPhi() * (22.0 / 7) / 180);
+	value.img += getVmax() * sin(getPhi() * (22.0 / 7) / 180);
+	}
 	IndepVolSrc(int n1, int n2): Component(n1, n2){ }
 	double getVmax(){ return Vmax; }
 	double getPhi(){ return phi; }
 	double getOmiga(){ return angularFreq; }
 	Impedance getZ(){ return nul; }
+	Voltage getValue() { return value; }
 };
 
 /////////////////////////////////////////
@@ -219,14 +224,19 @@ protected:
 	double Imax;
 	double phi;
 	double angularFreq;
-
+	Current value;
 public:
-	IndepCrntSrc(double i, double w, double a, int n1, int n2) : Component(n1, n2){ Imax = i;	angularFreq = w;	phi = a; }
+	IndepCrntSrc(double i, double w, double a, int n1, int n2) : Component(n1, n2),value()
+	{ Imax = i;	angularFreq = w;	phi = a;
+	value.rel += getImax() * cos(getPhi() * (22.0 / 7.0) / 180.0);
+	value.img += getImax() * sin(getPhi() * (22.0 / 7.0) / 180.0);
+	}
 	IndepCrntSrc(int n1, int n2): Component(n1, n2){ }
 	double getImax(){ return Imax; }
 	double getPhi(){ return phi; }
 	double getOmiga(){ return angularFreq; }
 	Impedance getZ(){ return nul; }
+	Current getValue() { return value; }
 };
 
 /////////////////////////////////////////
@@ -288,11 +298,11 @@ public:
 class Node
 {
 public:
-	int num, NoOfBranches;
+	int num;
 	Voltage V;
 	int i;
 	Node() { i = 0; }
-	void setV(std::complex<double> v) { V.rel = v.real(); }
+	void setV(std::complex<double> v) { V.setVoltage(v); }
 	void setN(int n) { num = n; }
 	int getN() { return num; }
 	std::complex<double> getV() { return V.getVoltage(); }
@@ -335,26 +345,75 @@ public:
 			return false;
 		else return true;
 	}
-	void calculateCurrent(Node arr[], int n)
+
+
+};
+
+
+class realBranch
+{
+public:
+	Node* N1, * N2;
+	Impedance impBranch;
+	Current BranchCurrent;
+	Voltage volt;
+	Component* BranchComponents[10];
+	int BranchComponentCount = 0;
+	realBranch() :impBranch(), volt(), BranchCurrent()
 	{
-		if (amb.getCurrent() != 0.0)
-		{
-			BranchCurrent.setcurrnt(amb.getCurrent());
-		}
-		else
-		{
-			Voltage V1, V2;
+		impBranch.rel = 0;
+		impBranch.img = 0;
+		volt.setVoltage(0);
+	}
+	void setN1(Node* n)
+	{
+		N1 = n;
+	}
 
-			for (int i = 0; i < n; i++)
+	void setN2(Node* n)
+	{
+		N2 = n;
+	}
+
+	Node* getN1()
+	{
+		return N1;
+	}
+
+	Node* getN2()
+	{
+		return N2;
+	}
+
+	void AddComponent(Component* c)
+	{
+		BranchComponents[BranchComponentCount++] = c;
+	}
+
+	void calculateCurrent()
+	{
+		bool flag = false;
+		for(int i = 0; i< BranchComponentCount; i++)
+		{
+			if (dynamic_cast<IndepCrntSrc*>(BranchComponents[i]) != NULL)
 			{
-				if (arr[i].getN() == node2)
-					V1.setVoltage(arr[i].getV());
-				else if (arr[i].getN() == node1)
-					V2.setVoltage(arr[i].getV());
+				flag = true;
+				/////work here
+				BranchCurrent = ((IndepCrntSrc*)BranchComponents[i])->getValue();
 			}
-			BranchCurrent.setcurrnt((V2.getVoltage() - V1.getVoltage()) / impBranch.getImpedance());
+			else
+			{
+				impBranch = impBranch + BranchComponents[i]->getZ();
+			}
 		}
-
+		if (!flag)
+		{
+			////work here 
+			if(abs(N1->getV()) > abs(N2->getV()))
+				BranchCurrent.setcurrnt((N1->getV() - N2->getV()) / impBranch.getImpedance());
+			else
+				BranchCurrent.setcurrnt((N2->getV() - N1->getV()) / impBranch.getImpedance());
+		}
 	}
 
 
@@ -363,6 +422,25 @@ public:
 		return BranchCurrent;
 	}
 
+	bool IsInside(Component* c)
+	{
+		for (int i = 0; i < BranchComponentCount; i++)
+		{
+			if (BranchComponents[i] == c)
+				return true;
+		}
+		return false;
+	}
+	void printInfo()
+	{
+		cout << "I(";
+		cout << getN1()->getN();
+		for (int i = 0; i < BranchComponentCount; i++)
+		{
+			cout << "," << BranchComponents[i]->getNode2() ;
+		}
+		cout << ") = "<<BranchCurrent.getCurrent()<<endl;
+	}
 };
 
 struct nonsimpleknown
@@ -398,7 +476,7 @@ void voltknown();
 
 bool supernode(int& , int&, complex<double>&);
 
-void CalculateNodes(Node arrN[], int n_N, branch arrB[], int n_B, Component* arrC[], int n_C);
+void CalculateNodes(Node arrN[], int n_N, realBranch arrB[], int n_B, Component* arrC[], int n_C);
 
 bool isNonSimpleNode(int *arr, int n, int node);
 
@@ -420,7 +498,9 @@ int n_nsnode=0;
 
 branch B[20];
 Node N[10];
-int n_B=0;
+realBranch RB[20];
+int n_B = 0;
+int n_RB = 0;
 Impedance branchImp[10];				//	Contains The Impedance Of Each Branch
 Voltage branchVol[10];					//	Contains The Value Of The Voltage Source In Each Branch -->> if exist
 Current branchCrnt[10];					//	Contains The Value Of The Current Source In Each Branch -->> if exist
@@ -626,6 +706,35 @@ int main(){
 	for(int i = 0; i < numOfNonSimpNodes; i++)
 		cout << nonSimpleNodes[i] << endl;
 
+
+	RB[n_RB++].setN1(&N[0]);
+	RB[0].setN2(&N[1]);
+	RB[0].AddComponent(arr[0]);
+	int PreviousNode;
+	flag1 = flag2 = false;
+	
+	for (int i = 1; i < num; i++)
+	{
+		for (int k = 0; k < n_RB; k++)
+		{
+			flag1 = false;
+			PreviousNode = RB[k].getN2()->getN();
+			if (PreviousNode == arr[i]->getNode1() && !isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, PreviousNode))
+			{
+				RB[k].AddComponent(arr[i]);
+				RB[k].setN2(&N[arr[i]->getNode2()]);
+			}
+			else 
+				flag1 = true;
+		}
+			if(flag1)
+			{
+			RB[n_RB++].setN1(&N[arr[i]->getNode1()]);
+			RB[n_RB - 1].setN2(&N[arr[i]->getNode2()]);
+			RB[n_RB - 1].AddComponent(arr[i]);
+			}
+	}
+
 	cout << "\nImpedence\n";
 	for(int i = 0; i < x; i++){
 		cout << branchImp[i].getImpedance() << endl;
@@ -663,13 +772,20 @@ int main(){
 
 	nodeanalysis();
 
-	for (int i = 0; i < n_B; i++)
+	for (int i = 0; i < n_RB; i++)
 	{
-		B[i].calculateCurrent(N, numOfNodes);
-		cout << B[i].getCurrent().getCurrent();
+		RB[i].calculateCurrent();
+		RB[i].printInfo();
 	}
 
-	CalculateNodes(N, numOfNodes, B, n_B, arr, num);
+	CalculateNodes(N, numOfNodes, RB, n_RB, arr, num);
+	cout << "V0 = 0" << endl;
+	for (int i = 1; i < numOfNodes; i++)
+	{
+		cout << "V" << i << " = " << N[i].getV()<<endl;
+	}
+
+
 
 	system("pause");
 	return 0;
@@ -838,7 +954,7 @@ void nodeanalysis()
 		for (int k = 0; k < numOfNodes; k++)
 			if (N[k].getN() == nonSimpleNodes[i])
 			{
-				N[k].setV(-R(i - 1, 0));
+				N[k].setV(R(i - 1, 0));
 			}
 	}
 
@@ -1016,18 +1132,17 @@ void LoadInputFile(Component* arr[], int& N, string FileName)
 }
 
 
-void CalculateNodes(Node arrN[], int n_N, branch arrB[], int n_B, Component* arrC[], int n_C)
+void CalculateNodes(Node arrN[], int n_N, realBranch arrB[], int n_B, Component* arrC[], int n_C)
 {
 	for (int i = 0; i < n_N; i++)
 	{
-		for (int k = 0; k < n_B; k++)
+		for (int k = 0; k < n_C; k++)
 		{
 			if (arrC[k]->getNode2() == arrN[i].getN())
 			{
 				for (int j = 0; j < n_B; j++)
 				{
-					/////////////////work here
-					if (arrB[j].node1 > arrB[j].node2 && arrC[k]->getNode2() <= arrB[j].node1 && arrC[k]->getNode2() >= arrB[j].node2)
+					if (arrB[j].IsInside(arrC[k]))
 					{
 						if (dynamic_cast<IndepVolSrc*>(arrC[k]) == NULL)
 						{
@@ -1045,7 +1160,7 @@ void CalculateNodes(Node arrN[], int n_N, branch arrB[], int n_B, Component* arr
 						}
 						else
 						{
-							arrN[i].setV(((IndepVolSrc*)arrC[k])->getVmax());
+							arrN[i].setV(((IndepVolSrc*)arrC[k])->getValue().getVoltage());
 							break;
 						}
 					}
