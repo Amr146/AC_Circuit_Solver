@@ -865,37 +865,41 @@ void analyseComp(Component* pComp, int n1, int n2){
 
 void nodeanalysis()
 {
-	int n=numOfNonSimpNodes-1;
-	Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> y(n, n);
-	y.setZero();
-	Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> cu(n, 1);
-	cu.setZero();
-	Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> R(n, 1);
-	R.setZero();
-	for(int i=1; i<numOfNonSimpNodes;i++)
+	if (numOfNonSimpNodes != 0)
 	{
-		for(int j=0;j<n_B;j++)
+		int n = numOfNonSimpNodes - 1;
+		Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> y(n, n);
+		y.setZero();
+		Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> cu(n, 1);
+		cu.setZero();
+		Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> R(n, 1);
+		R.setZero();
+		for (int i = 1; i < numOfNonSimpNodes; i++)
 		{
-			if(B[j].node1==nonSimpleNodes[i] && B[j].node2==0)
+			for (int j = 0; j < n_B; j++)
 			{
-				if(B[j].isimp())
-					y(i-1,i-1)=y(i-1,i-1)+1.0/B[j].impBranch.getImpedance();
-				cu(i-1,0)=cu(i-1,0)+B[j].amb.getCurrent();
-			}
-			else if(B[j].node1==nonSimpleNodes[i] && B[j].node2!=0)
-			{
-				
-
-				for(int k=1; k<numOfNonSimpNodes; k++)
+				if (B[j].node1 == nonSimpleNodes[i] && B[j].node2 == 0)
 				{
-					if(B[j].node2==nonSimpleNodes[k] && i!=k)
+					if (B[j].isimp())
+						y(i - 1, i - 1) = y(i - 1, i - 1) + 1.0 / B[j].impBranch.getImpedance();
+					cu(i - 1, 0) = cu(i - 1, 0) + B[j].amb.getCurrent();
+				}
+				else if (B[j].node1 == nonSimpleNodes[i] && B[j].node2 != 0)
+				{
+
+
+					for (int k = 1; k < numOfNonSimpNodes; k++)
 					{
-					 if(B[j].isimp())
+						if (B[j].node2 == nonSimpleNodes[k] && i != k)
 						{
-							y(i-1,i-1)=y(i-1,i-1)+1.0/B[j].impBranch.getImpedance();
-							y(i-1,k-1)=y(i-1,k-1)-1.0/B[j].impBranch.getImpedance();
+							if (B[j].isimp())
+							{
+								y(i - 1, i - 1) = y(i - 1, i - 1) + 1.0 / B[j].impBranch.getImpedance();
+								y(i - 1, k - 1) = y(i - 1, k - 1) - 1.0 / B[j].impBranch.getImpedance();
+							}
+							cu(i - 1, 0) = cu(i - 1, 0) + B[j].amb.getCurrent();
 						}
-						cu(i-1,0)=cu(i-1,0)+B[j].amb.getCurrent();
+
 					}
 
 				}
@@ -903,66 +907,64 @@ void nodeanalysis()
 			}
 
 		}
-	
-	}
-	
-	voltknown();
-	for( int t=0 ;t<num_nonSknown; t++)
-	{
-		int m=nonSknown[t].n;
-		cu.col(0).array()-=y.col(m-1).array();
-		cu.col(0).array()*=nonSknown[t].vb.getVoltage();
-		y.col(m-1).setZero();
-		y.row(m-1).setZero();
-		y(m-1,m-1)=1;
-		cu(m-1,0)=nonSknown[t].vb.getVoltage();
 
-		
-	}
-	
-	{
-		int i=0; int k=0; complex<double> e;
-		if(supernode(i,k,e))
-		{	
-			y.row(i-1)=y.row(i-1)+y.row(k-1);
-			y.row(k-1).setZero();
-			cu.row(i-1)=cu.row(i-1)+cu.row(k-1);
-			cu.row(k-1).setZero();
-			y(k-1,k-1)=1;
-			if(k<i)
-			{
-				y(k-1,i-1)=-1;
-				cu(k-1,0)=e;	
-			}
-			else
-			{
-				y(k-1,i-1)=-1;
-				cu(k-1,0)=-e;
-			}
+		voltknown();
+		for (int t = 0; t < num_nonSknown; t++)
+		{
+			int m = nonSknown[t].n;
+			cu.col(0).array() -= y.col(m - 1).array();
+			cu.col(0).array() *= nonSknown[t].vb.getVoltage();
+			y.col(m - 1).setZero();
+			y.row(m - 1).setZero();
+			y(m - 1, m - 1) = 1;
+			cu(m - 1, 0) = nonSknown[t].vb.getVoltage();
+
 
 		}
-	}
-	
 
-
-
-
-	R=y.inverse()*cu;
-
-	for (int i = 1; i < numOfNonSimpNodes; i++)
-	{
-		for (int k = 0; k < numOfNodes; k++)
-			if (N[k].getN() == nonSimpleNodes[i])
+		{
+			int i = 0; int k = 0; complex<double> e;
+			if (supernode(i, k, e))
 			{
-				N[k].setV(R(i - 1, 0));
+				y.row(i - 1) = y.row(i - 1) + y.row(k - 1);
+				y.row(k - 1).setZero();
+				cu.row(i - 1) = cu.row(i - 1) + cu.row(k - 1);
+				cu.row(k - 1).setZero();
+				y(k - 1, k - 1) = 1;
+				if (k < i)
+				{
+					y(k - 1, i - 1) = -1;
+					cu(k - 1, 0) = e;
+				}
+				else
+				{
+					y(k - 1, i - 1) = -1;
+					cu(k - 1, 0) = -e;
+				}
+
 			}
+		}
+
+
+
+
+
+		R = y.inverse() * cu;
+
+		for (int i = 1; i < numOfNonSimpNodes; i++)
+		{
+			for (int k = 0; k < numOfNodes; k++)
+				if (N[k].getN() == nonSimpleNodes[i])
+				{
+					N[k].setV(R(i - 1, 0));
+				}
+		}
+
+		cout << y << endl << endl;
+		cout << cu << endl << endl;
+		cout << R << endl << endl;
+
 	}
-
-	cout<<y<<endl<<endl;
-	cout<<cu<<endl<<endl;
-	cout<<R<<endl<<endl;
-	
-
 }
 
 void VoltToCurrent()
@@ -1134,39 +1136,66 @@ void LoadInputFile(Component* arr[], int& N, string FileName)
 
 void CalculateNodes(Node arrN[], int n_N, realBranch arrB[], int n_B, Component* arrC[], int n_C)
 {
-	for (int i = 0; i < n_N; i++)
-	{
-		for (int k = 0; k < n_C; k++)
+	if (numOfNonSimpNodes != 0) {
+		for (int i = 1; i < n_N; i++)
 		{
-			if (arrC[k]->getNode2() == arrN[i].getN())
+			for (int k = 0; k < n_C; k++)
 			{
-				for (int j = 0; j < n_B; j++)
+				if (arrC[k]->getNode2() == arrN[i].getN())
 				{
-					if (arrB[j].IsInside(arrC[k]))
+					for (int j = 0; j < n_B; j++)
 					{
-						if (dynamic_cast<IndepVolSrc*>(arrC[k]) == NULL)
+						if (arrB[j].IsInside(arrC[k]))
 						{
-							Voltage PreviousV;
-							PreviousV.setVoltage(0);
-							for (int l = 0; l < numOfNodes; l++)
+							if (dynamic_cast<IndepVolSrc*>(arrC[k]) == NULL && dynamic_cast<IndepCrntSrc*>(arrC[k]) == NULL)
 							{
-								if (arrN[i].getN() == arrN[l].getN() + 1)
+								Voltage PreviousV;
+								PreviousV.setVoltage(0);
+								for (int l = 0; l < numOfNodes; l++)
 								{
-									PreviousV.setVoltage(arrN[l].getV());
+									if (arrN[i].getN() == arrN[l].getN() + 1)
+									{
+										PreviousV.setVoltage(arrN[l].getV());
+									}
 								}
+								arrN[i].setV(PreviousV.getVoltage() - (arrB[j].getCurrent().getCurrent() * arrC[k]->getZ().getImpedance()));
+								break;
 							}
-							arrN[i].setV(PreviousV.getVoltage() - (arrB[j].getCurrent().getCurrent() * arrC[k]->getZ().getImpedance()));
-							break;
-						}
-						else
-						{
-							arrN[i].setV(((IndepVolSrc*)arrC[k])->getValue().getVoltage());
-							break;
+							else if (dynamic_cast<IndepVolSrc*>(arrC[k]) != NULL)
+							{
+								arrN[i].setV(((IndepVolSrc*)arrC[k])->getValue().getVoltage());
+								break;
+							}
 						}
 					}
-				}
 
+				}
 			}
 		}
+	}
+	else
+	{
+		double R = 0;
+		double v = 0;
+		for (int k = 0; k < n_C; k++)
+		{
+			if (dynamic_cast<IndepVolSrc*>(arrC[k]) != NULL)
+				v += ((IndepVolSrc*)arrC[k])->getValue().getVoltage().real();
+		}
+		for (int k = 0; k < n_C; k++)
+		{
+			if (dynamic_cast<IndepVolSrc*>(arrC[k]) == NULL)
+				R += arrC[k]->getZ().rel;
+		}
+
+		double C = (v / R);
+		for (int i = 1; i < n_C; i++)
+		{
+			for (int k = 0; k < n_C; k++)
+			{
+				N[k].setV(arrC[k]->getZ().rel * C);
+			}
+		}
+
 	}
 }
