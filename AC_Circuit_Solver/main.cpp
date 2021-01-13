@@ -558,7 +558,7 @@ int main(){
 				B[n_B].node1=n2;
 				numOfConnectedBranchesToNode[i]++;
 				startNode = n1;
-				
+				B[n_B].node2=startNode;
 				analyseComp(arr[j], n1, n2);
 
 				while(!isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, startNode))
@@ -571,12 +571,14 @@ int main(){
 						if(startNode == n2)
 						{
 							startNode = n1;
+							B[n_B].node2=startNode;
 							analyseComp(arr[k], n1, n2);
 							break;
 						}
 						else if(startNode == n1)
 						{
 							startNode = n2;
+							B[n_B].node2=startNode;
 							analyseComp(arr[k], n1, n2);
 							break;
 						}
@@ -590,7 +592,7 @@ int main(){
 				B[n_B].node1=n1;
 				numOfConnectedBranchesToNode[i]++;
 				startNode = n2;
-				
+				B[n_B].node2=startNode;
 				analyseComp(arr[j], n1, n2);
 
 				while(!isNonSimpleNode(nonSimpleNodes, numOfNonSimpNodes, startNode))
@@ -602,10 +604,12 @@ int main(){
 						n2 = arr[k]->getNode2();
 						if(startNode == n2){
 							startNode = n1;
+							B[n_B].node2=startNode;
 							analyseComp(arr[k], n1, n2);
 							break;
 						}else if(startNode == n1){
 							startNode = n2;
+							B[n_B].node2=startNode;
 							analyseComp(arr[k], n1, n2);
 							break;
 						}
@@ -698,9 +702,10 @@ void analyseComp(Component* pComp, int n1, int n2){
 	}
 	else if(dynamic_cast<IndepVolSrc*>(pComp) != NULL){
 		IndepVolSrc* v = dynamic_cast<IndepVolSrc*>(pComp);
-		branchVol[x].rel = v->getVmax()*cos(v->getPhi() * (22.0/7)/180);
-		branchVol[x].img = v->getVmax()*sin(v->getPhi() * (22.0/7)/180);
-		if(B[n_B].node1==n2)
+		branchVol[x].rel += v->getVmax()*cos(v->getPhi() * (22.0/7)/180);
+		branchVol[x].img += v->getVmax()*sin(v->getPhi() * (22.0/7)/180);
+		
+		if(B[n_B].node2==n1)
 		{
 			B[n_B].volt.rel=branchVol[x].rel;
 			B[n_B].volt.img=branchVol[x].img;
@@ -710,26 +715,28 @@ void analyseComp(Component* pComp, int n1, int n2){
 			B[n_B].volt.rel=-branchVol[x].rel;
 			B[n_B].volt.img=-branchVol[x].img;
 		}
-		
+	
 		if(n1 > n2){
 			branchVol[x].rel *= -1;
 			branchVol[x].img *= -1;
+			
 		}
+
+		
 	}else{
 		IndepCrntSrc* v = dynamic_cast<IndepCrntSrc*>(pComp);
-		branchCrnt[x].rel = v->getImax()*cos(v->getPhi() * (22.0/7.0)/180.0);
-		branchCrnt[x].img = v->getImax()*sin(v->getPhi() * (22.0/7.0)/180.0);
-		if(B[n_B].node1==n2)
-		{
-			B[n_B].amb.rel=branchCrnt[x].rel;
-			B[n_B].amb.img=branchCrnt[x].img;
-		}
-		else
+		branchCrnt[x].rel += v->getImax()*cos(v->getPhi() * (22.0/7.0)/180.0);
+		branchCrnt[x].img += v->getImax()*sin(v->getPhi() * (22.0/7.0)/180.0);
+		if(B[n_B].node2==n2)
 		{
 			B[n_B].amb.rel=-branchCrnt[x].rel;
 			B[n_B].amb.img=-branchCrnt[x].img;
 		}
-
+		else
+		{
+			B[n_B].amb.rel=branchCrnt[x].rel;
+			B[n_B].amb.img=branchCrnt[x].img;
+		}
 		if(n1 > n2)
 		{
 			branchCrnt[x].rel *= -1;
@@ -850,10 +857,9 @@ void VoltToCurrent()
 		{
 			B[n_B].node1=B[i].node1;
 			B[n_B].node2=B[i].node2;
-			if ( B[n_B].node1 > B[n_B].node2 )
-				B[n_B].amb.setcurrnt(B[i].volt.getVoltage()/B[i].impBranch.getImpedance());
-			else 
-				B[n_B].amb.setcurrnt(-B[i].volt.getVoltage()/B[i].impBranch.getImpedance());
+			
+			B[n_B].amb.setcurrnt(B[i].volt.getVoltage()/B[i].impBranch.getImpedance());
+			
 			n_B++;
 			B[i].volt.rel=0;
 			B[i].volt.img=0;
