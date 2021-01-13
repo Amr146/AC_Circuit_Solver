@@ -290,8 +290,8 @@ class Node
 public:
 	int num, NoOfBranches;
 	Voltage V;
-	int i = 0;
-	Node() {}
+	int i;
+	Node() { i = 0; }
 	void setV(std::complex<double> v) { V.rel = v.real(); }
 	void setN(int n) { num = n; }
 	int getN() { return num; }
@@ -392,15 +392,11 @@ struct nonsimplnode
 
 };
 
-
 void deletenode(int);
-
-
 
 void voltknown();
 
 bool supernode(int& , int&, complex<double>&);
-
 
 void CalculateNodes(Node arrN[], int n_N, branch arrB[], int n_B, Component* arrC[], int n_C);
 
@@ -409,6 +405,7 @@ bool isNonSimpleNode(int *arr, int n, int node);
 void analyseComp(Component* pComp, int n1, int n2);
 
 void nodeanalysis();
+
 void VoltToCurrent();
 
 void LoadInputFile(Component* [], int&, string);
@@ -451,7 +448,6 @@ int main(){
 			cout << "file not found" << endl;
 		}
 	}
-	
 	/*IndepCrntSrc i1(2,0,0,0,1);
 	arr[num++]= &i1;
 
@@ -469,9 +465,6 @@ int main(){
 
 	IndepCrntSrc i2(7,0,0,2,0);
 	arr[num++]= &i2;*/
-
-
-
 	//	Getting The Non-Simple Nodes
 	
 	N[0].setN(arr[0]->getNode1());
@@ -663,7 +656,6 @@ int main(){
 		nsnode[n_nsnode].node=nonSimpleNodes[i];
 		nsnode[n_nsnode].index=i;
 	}
-
 
 	nodeanalysis();
 
@@ -959,7 +951,7 @@ void LoadInputFile(Component* arr[], int& N, string FileName)
 	{
 		string ComponentType;
 		string ComponentName;
-		int  n1, n2;
+		int  n1, n2, depN1, depN2;
 		double value, phi;
 		int Omega = 0;
 		while (!InputFile.eof())
@@ -981,18 +973,20 @@ void LoadInputFile(Component* arr[], int& N, string FileName)
 				InputFile >> ComponentName >> n1 >> n2 >> value >> phi;
 				arr[N++] = new IndepVolSrc(value, Omega, phi, n1, n2);
 			}
+			else if (ComponentType == "vcvs")
+			{
+				InputFile >> ComponentName >> n1 >> n2 >> value >> depN1 >> depN2;		//	Value here refer to the Coefficient
+				arr[N++] = new DepVolSrc(value, n1, n2, depN1, depN2);
+			}
 			else if (ComponentType == "isrc")
 			{
 				InputFile >> ComponentName >> n1 >> n2 >> value >> phi;
 				arr[N++] = new IndepCrntSrc(value, Omega, phi, n1, n2);
 			}
-			else if (ComponentType == "vcvs")
-			{
-				cout << "voltage controlled voltage source" << endl;
-			}
 			else if (ComponentType == "cccs")
 			{
-				cout << "current controlled current source" << endl;
+				InputFile >> ComponentName >> n1 >> n2 >> value >> depN1 >> depN2;		//	Value here refer to the Coefficient
+				arr[N++] = new DepCrntSrc(value, n1, n2, depN1, depN2);
 			}
 			else if (ComponentType == "cap")
 			{
